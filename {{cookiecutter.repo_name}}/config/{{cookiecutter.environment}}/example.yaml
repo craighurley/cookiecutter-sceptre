@@ -1,0 +1,10 @@
+{% raw %}template_path: templates/example.yaml
+stack_tags:
+  Application: {{ environment_config.project_code }}
+  Environment: {{ environment_config.environment }}
+  Owner: {{ environment_config.owner }}
+parameters:
+  Application: {{ environment_config.application }}
+  CidrVpc: 172.168.0.0/21
+  CidrPublicSubnet1: 172.168.0.0/24
+  CidrPublicSubnet2: 172.168.1.0/24{% endraw %}
