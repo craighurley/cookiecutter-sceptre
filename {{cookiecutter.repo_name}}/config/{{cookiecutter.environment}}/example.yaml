@@ -4,7 +4,11 @@ stack_tags:
   Environment: {{ environment_config.environment }}
   Owner: {{ environment_config.owner }}
 parameters:
-  Application: {{ environment_config.application }}
+  ProjectCode: {{ environment_config.project_code }}
   CidrVpc: 172.168.0.0/21
   CidrPublicSubnet1: 172.168.0.0/24
-  CidrPublicSubnet2: 172.168.1.0/24{% endraw %}
+  CidrPublicSubnet2: 172.168.1.0/24
+
+#hooks:
+#   after_create:
+#     - !cmd aws cloudformation update-termination-protection --enable-termination-protection --stack-name {{ environment_config.project_code }}-{{ environment_config.environment }}-example{% endraw %}
