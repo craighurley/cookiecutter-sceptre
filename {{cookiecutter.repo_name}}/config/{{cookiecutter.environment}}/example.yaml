@@ -9,6 +9,8 @@ parameters:
   CidrPublicSubnet1: 172.168.0.0/24
   CidrPublicSubnet2: 172.168.1.0/24
 
-#hooks:
+# hooks:
 #   after_create:
-#     - !cmd aws cloudformation update-termination-protection --enable-termination-protection --stack-name {{ environment_config.project_code }}-{{ environment_config.environment }}-example{% endraw %}
+#     - !set_stack_termination_protection 'enabled'
+#   before_delete:
+#     - !set_stack_termination_protection 'disabled'{% endraw %}
