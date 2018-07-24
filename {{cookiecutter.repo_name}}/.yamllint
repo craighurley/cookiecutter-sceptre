@@ -1,0 +1,10 @@
+---
+extends: default
+rules:
+  document-start: disable
+  braces:
+    max-spaces-inside: 1
+    min-spaces-inside: 0
+  line-length:
+    max: 999
+    level: warning

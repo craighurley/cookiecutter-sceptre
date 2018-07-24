@@ -1,4 +1,6 @@
 awscli
 boto3
+cfn-flip
 pylint
 sceptre
+yamllint
