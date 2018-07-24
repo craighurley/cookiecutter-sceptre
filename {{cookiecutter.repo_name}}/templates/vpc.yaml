@@ -1,0 +1,359 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: VPC stack
+Parameters:
+  Prefix:
+    Type: String
+    Default: unknown
+    MaxLength: '64'
+    AllowedPattern: '[A-Za-z0-9_\-\.]+'
+    ConstraintDescription: 'must contain only letters (upper or lower), number or
+      any of the following characters: ''_'' ''-'' ''.''.'''
+    Description: Prefix that makes the stack unique to a user or project.
+  Environment:
+    Type: String
+    MaxLength: '5'
+    AllowedPattern: '[a-z]+'
+    ConstraintDescription: must contain only lower case letters
+    AllowedValues:
+      - dev
+      - test
+      - stage
+      - prod
+    Default: dev
+  VpcCidr:
+    Type: String
+    Description: CIDR for the VPC
+    MinLength: '9'
+    MaxLength: '18'
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    ConstraintDescription: must be a valid CIDR range of the form x.x.x.x/x.
+  SubnetCount:
+    Type: Number
+    Description: The number of subnet CIDR blocks wanted
+    MinValue: 1
+    MaxValue: 256
+    Default: 256
+  SubnetMaskSize:
+    Description: The digit covered in the subnet
+    Type: Number
+    MinValue: 4
+    MaxValue: 16
+    Default: 8
+  CreateNatGateway:
+    Type: String
+    MaxLength: '5'
+    AllowedPattern: '[a-z]+'
+    ConstraintDescription: must be 'true' or 'false'
+    AllowedValues:
+      - true
+      - false
+    Default: false
+Conditions:
+  CreateMultiAz: !Not
+    - !Equals
+      - !Ref 'Environment'
+      - dev
+  CreateNatGateway: !Equals
+    - !Ref 'CreateNatGateway'
+    - 'true'
+  CreateMultiAzNatGateway: !And
+    - !Condition 'CreateMultiAz'
+    - !Condition 'CreateNatGateway'
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref 'VpcCidr'
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value: !Sub '${Prefix}-${Environment}-vpc'
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub '${Prefix}-${Environment}-internetgateway'
+  VPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref 'InternetGateway'
+      VpcId: !Ref 'VPC'
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref 'VPC'
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs ''
+      CidrBlock: !Select
+        - 0
+        - !Cidr
+          - !Ref 'VpcCidr'
+          - !Ref 'SubnetCount'
+          - !Ref 'SubnetMaskSize'
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${Prefix}-${Environment}-publicsubnet1'
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Condition: CreateMultiAz
+    Properties:
+      VpcId: !Ref 'VPC'
+      AvailabilityZone: !Select
+        - 1
+        - !GetAZs ''
+      CidrBlock: !Select
+        - 1
+        - !Cidr
+          - !Ref 'VpcCidr'
+          - !Ref 'SubnetCount'
+          - !Ref 'SubnetMaskSize'
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${Prefix}-${Environment}-publicsubnet2'
+  PrivateSubnetA1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref 'VPC'
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs ''
+      CidrBlock: !Select
+        - 2
+        - !Cidr
+          - !Ref 'VpcCidr'
+          - !Ref 'SubnetCount'
+          - !Ref 'SubnetMaskSize'
+      Tags:
+        - Key: Name
+          Value: !Sub '${Prefix}-${Environment}-privatesubnetA1'
+  PrivateSubnetA2:
+    Type: AWS::EC2::Subnet
+    Condition: CreateMultiAz
+    Properties:
+      VpcId: !Ref 'VPC'
+      AvailabilityZone: !Select
+        - 1
+        - !GetAZs ''
+      CidrBlock: !Select
+        - 3
+        - !Cidr
+          - !Ref 'VpcCidr'
+          - !Ref 'SubnetCount'
+          - !Ref 'SubnetMaskSize'
+      Tags:
+        - Key: Name
+          Value: !Sub '${Prefix}-${Environment}-privatesubnetA2'
+  PrivateSubnetB1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref 'VPC'
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs ''
+      CidrBlock: !Select
+        - 4
+        - !Cidr
+          - !Ref 'VpcCidr'
+          - !Ref 'SubnetCount'
+          - !Ref 'SubnetMaskSize'
+      Tags:
+        - Key: Name
+          Value: !Sub '${Prefix}-${Environment}-privatesubnetB1'
+  PrivateSubnetB2:
+    Type: AWS::EC2::Subnet
+    Condition: CreateMultiAz
+    Properties:
+      VpcId: !Ref 'VPC'
+      AvailabilityZone: !Select
+        - 1
+        - !GetAZs ''
+      CidrBlock: !Select
+        - 5
+        - !Cidr
+          - !Ref 'VpcCidr'
+          - !Ref 'SubnetCount'
+          - !Ref 'SubnetMaskSize'
+      Tags:
+        - Key: Name
+          Value: !Sub '${Prefix}-${Environment}-privatesubnetB2'
+  EIPNatGateway1:
+    Type: AWS::EC2::EIP
+    Condition: CreateNatGateway
+    Properties:
+      Domain: vpc
+  EIPNatGateway2:
+    Type: AWS::EC2::EIP
+    Condition: CreateMultiAzNatGateway
+    Properties:
+      Domain: vpc
+  NatGateway1:
+    Type: AWS::EC2::NatGateway
+    Condition: CreateNatGateway
+    Properties:
+      AllocationId: !GetAtt 'EIPNatGateway1.AllocationId'
+      SubnetId: !Ref 'PublicSubnet1'
+      Tags:
+        - Key: Name
+          Value: !Sub '${Prefix}-${Environment}-natgateway1'
+  NatGateway2:
+    Type: AWS::EC2::NatGateway
+    Condition: CreateMultiAzNatGateway
+    Properties:
+      AllocationId: !GetAtt 'EIPNatGateway2.AllocationId'
+      SubnetId: !Ref 'PublicSubnet2'
+      Tags:
+        - Key: Name
+          Value: !Sub '${Prefix}-${Environment}-natgateway2'
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref 'VPC'
+      Tags:
+        - Key: Name
+          Value: !Sub '${Prefix}-${Environment}-publicroutetable'
+  PrivateRouteTable1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref 'VPC'
+      Tags:
+        - Key: Name
+          Value: !Sub '${Prefix}-${Environment}-privateroutetable1'
+  PrivateRouteTable2:
+    Type: AWS::EC2::RouteTable
+    Condition: CreateMultiAz
+    Properties:
+      VpcId: !Ref 'VPC'
+      Tags:
+        - Key: Name
+          Value: !Sub '${Prefix}-${Environment}-privateroutetable2'
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGateway
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref 'InternetGateway'
+      RouteTableId: !Ref 'PublicRouteTable'
+  PrivateRoute1:
+    Type: AWS::EC2::Route
+    Condition: CreateNatGateway
+    Properties:
+      RouteTableId: !Ref 'PrivateRouteTable1'
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref 'NatGateway1'
+  PrivateRoute2:
+    Type: AWS::EC2::Route
+    Condition: CreateMultiAzNatGateway
+    Properties:
+      RouteTableId: !Ref 'PrivateRouteTable2'
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref 'NatGateway2'
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref 'PublicRouteTable'
+      SubnetId: !Ref 'PublicSubnet1'
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: CreateMultiAz
+    Properties:
+      RouteTableId: !Ref 'PublicRouteTable'
+      SubnetId: !Ref 'PublicSubnet2'
+  PrivateSubnetA1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref 'PrivateRouteTable1'
+      SubnetId: !Ref 'PrivateSubnetA1'
+  PrivateSubnetA2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: CreateMultiAz
+    Properties:
+      RouteTableId: !Ref 'PrivateRouteTable2'
+      SubnetId: !Ref 'PrivateSubnetA2'
+  PrivateSubnetB1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref 'PrivateRouteTable1'
+      SubnetId: !Ref 'PrivateSubnetB1'
+  PrivateSubnetB2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: CreateMultiAz
+    Properties:
+      RouteTableId: !Ref 'PrivateRouteTable2'
+      SubnetId: !Ref 'PrivateSubnetB2'
+  S3Endpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - s3:*
+            Effect: Allow
+            Resource:
+              - arn:aws:s3:::*
+            Principal: '*'
+      RouteTableIds: !If
+        - CreateMultiAz
+        - - !Ref 'PublicRouteTable'
+          - !Ref 'PrivateRouteTable1'
+          - !Ref 'PrivateRouteTable2'
+        - - !Ref 'PublicRouteTable'
+          - !Ref 'PrivateRouteTable1'
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.s3'
+      VpcId: !Ref 'VPC'
+Outputs:
+  StackName:
+    Value: !Sub '${AWS::StackName}'
+  Environment:
+    Value: !Ref 'Environment'
+  VPC:
+    Value: !Ref 'VPC'
+    Export:
+      Name: !Sub '${AWS::StackName}-ID'
+  VPCCidr:
+    Value: !GetAtt 'VPC.CidrBlock'
+    Export:
+      Name: !Sub '${AWS::StackName}-VPCCidr'
+  PublicSubnet1:
+    Value: !Ref 'PublicSubnet1'
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicSubnet1'
+  PublicSubnet2:
+    Value: !Ref 'PublicSubnet2'
+    Condition: CreateMultiAz
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicSubnet2'
+  PrivateSubnetA1:
+    Value: !Ref 'PrivateSubnetA1'
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateSubnetA1'
+  PrivateSubnetA2:
+    Value: !Ref 'PrivateSubnetA2'
+    Condition: CreateMultiAz
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateSubnetA2'
+  PrivateSubnetB1:
+    Value: !Ref 'PrivateSubnetB1'
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateSubnetB1'
+  PrivateSubnetB2:
+    Value: !Ref 'PrivateSubnetB2'
+    Condition: CreateMultiAz
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateSubnetB2'
+  EIPNatGateway1:
+    Value: !Ref 'EIPNatGateway1'
+    Condition: CreateNatGateway
+    Export:
+      Name: !Sub '${AWS::StackName}-EIPNatGateway1'
+  EIPNatGateway2:
+    Value: !Ref 'EIPNatGateway2'
+    Condition: CreateMultiAzNatGateway
+    Export:
+      Name: !Sub '${AWS::StackName}-EIPNatGateway2'

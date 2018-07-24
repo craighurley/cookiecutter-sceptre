@@ -1,0 +1,11 @@
+template_path: templates/vpc.yaml
+stack_tags:
+  Application: {{ environment_config.project_code }}
+  Environment: {{ environment_config.environment }}
+  Owner: {{ environment_config.owner }}
+parameters:
+  Prefix: {{ environment_config.project_code }}
+  Environment: {{ environment_config.environment }}
+  VpcCidr: '{{ var.VpcCidr | default("172.32.0.0/16") }}'
+  SubnetCount: '{{ var.SubnetCount | default("256") }}'
+  SubnetMaskSize: '{{ var.SubnetMaskSize | default("8") }}'

@@ -2,3 +2,4 @@ environment: {{cookiecutter.environment}}
 owner: {{cookiecutter.owner}}
 project_code: {{cookiecutter.project_code}}
 region: {{cookiecutter.region}}
+profile: default
