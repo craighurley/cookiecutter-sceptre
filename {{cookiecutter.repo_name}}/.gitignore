@@ -2,3 +2,5 @@
 .python-version
 *.log
 /tmp
+/vars/*
+!vars/template.yaml
