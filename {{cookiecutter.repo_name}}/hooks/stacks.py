@@ -1,5 +1,8 @@
 """
 Provide utility hooks for operating on stacks.
+
+Note: If using var file, ensure you default the parameter otherwise this script will fail, e.g:
+    ExampleParameter: '{{ var.ExampleParameter | default("example") }}'
 """
 
 from sceptre.hooks import Hook
@@ -32,7 +35,7 @@ class SetStackTerminationProtection(Hook):
             cf_stack_name, argument)
 
         self.connection_manager.call('cloudformation', 'update_termination_protection',
-                                     kwargs={
-                                         'StackName': cf_stack_name,
-                                         'EnableTerminationProtection': enable
-                                     })
+                                    kwargs={
+                                        'StackName': cf_stack_name,
+                                        'EnableTerminationProtection': enable
+                                    })

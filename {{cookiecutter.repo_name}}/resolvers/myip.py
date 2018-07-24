@@ -11,16 +11,18 @@ class MyIp(Resolver):
     Get the public IP address of the caller.
     """
 
+    SITE = 'http://checkip.amazonaws.com/'
+
     def __init__(self, *args, **kwargs):
         super(MyIp, self).__init__(*args, **kwargs)
 
     def resolve(self):
         try:
-            ip = requests.get('http://checkip.amazonaws.com/').text.replace('\r', '').replace('\n', '')
+            ip = requests.get(self.SITE, timeout=3).text.replace('\r', '').replace('\n', '')
         except requests.RequestException:
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            print('Error performing GET on the checkip service; file: %s, line: %s' % (fname, exc_tb.tb_lineno))
+            print('Error performing GET on %s; file: %s, line: %s' % (self.SITE, fname, exc_tb.tb_lineno))
             sys.exit(1)
 
         try:
@@ -28,7 +30,7 @@ class MyIp(Resolver):
         except ValueError:
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            print('Invalid response from checkip service; file: %s, line: %s' % (fname, exc_tb.tb_lineno))
+            print('Invalid response from %s; file: %s, line: %s' % (self.SITE, fname, exc_tb.tb_lineno))
             sys.exit(1)
 
         return ip + '/32'
