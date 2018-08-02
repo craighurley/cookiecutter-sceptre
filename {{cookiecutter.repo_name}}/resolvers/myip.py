@@ -1,4 +1,6 @@
-#!/usr/bin/env python
+"""
+Get the public IP address of the caller.
+"""
 
 import ipaddress
 import os
